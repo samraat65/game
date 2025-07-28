@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6x7 Board Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(6, 70px);
+            grid-template-rows: repeat(7, 70px);
+            gap: 2px;
+            margin: 20px auto;
+            border: 2px solid #333;
+            background-color: #8B4513;
+            padding: 10px;
+        }
+        
+        .cell {
+            width: 70px;
+            height: 70px;
+            background-color: #DEB887;
+            border: 1px solid #8B4513;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .cell.middle-row {
+            background-color: #B8860B;
+        }
+        
+        .cell.highlighted {
+            background-color: #90EE90;
+        }
+        
+        .cell.selected {
+            background-color: #FFD700;
+        }
+        
+        .cell.attack-range {
+            background-color: #FFB6C1;
+        }
+        
+        .piece {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        /* Figurine styles for different piece types */
+        .figurine {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            border-radius: 50%;
+            border: 2px solid;
+            position: relative;
+        }
+        
+        /* Player 1 (Blue team) colors */
+        .player1 .figurine {
+            background: linear-gradient(145deg, #4A90E2, #357EC7);
+            border-color: #2E5C8A;
+            color: #FFFFFF;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+        
+        /* Player 2 (Red team) colors */
+        .player2 .figurine {
+            background: linear-gradient(145deg, #E74C3C, #C0392B);
+            border-color: #A93226;
+            color: #FFFFFF;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+        
+        /* Special styling for different unit types */
+        .general-figurine {
+            border-radius: 8px;
+            font-size: 24px;
+            background: linear-gradient(145deg, #FFD700, #FFA500) !important;
+            border-color: #FF8C00 !important;
+            color: #000000 !important;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5) !important;
+        }
+        
+        .cavalry-figurine {
+            border-radius: 60% 40% 60% 40%;
+        }
+        
+        .heavy-infantry-figurine {
+            border-radius: 15%;
+            font-size: 24px;
+        }
+        
+        .light-infantry-figurine {
+            border-radius: 25%;
+            font-size: 26px;
+        }
+        
+        .archer-figurine {
+            border-radius: 30% 70% 30% 70%;
+            font-size: 24px;
+        }
+        
+        /* NEW: Health dots system */
+        .health-dots {
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 2px;
+        }
+        
+        .health-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 1px solid #333;
+        }
+        
+        .health-dot.healthy {
+            background-color: #44ff44;
+        }
+        
+        .health-dot.damaged {
+            background-color: #333333;
+        }
+        
+        .ammo-counter {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background-color: #333;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .replenished-indicator {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .current-player {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .phase-info {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .placement-counter {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .turn-actions {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .phase-requirement {
+            font-size: 12px;
+            color: #ff6600;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .piece-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .piece-button {
+            padding: 8px 12px;
+            border: 2px solid #333;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        
+        .piece-button.selected {
+            background-color: #FFD700;
+        }
+        
+        .piece-button.disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        .end-turn-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        .end-turn-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .end-turn-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .piece-counts {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            font-size: 12px;
+        }
+        
+        .player-pieces {
+            border: 1px solid #333;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .error-message {
+            color: #ff0000;
+            font-size: 14px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .placement-zones {
+            font-size: 12px;
+            margin: 10px 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- 
+    =============================================================================
+    6x7 TACTICAL BOARD GAME
+    =============================================================================
+    
+    NOTE FOR AI ASSISTANTS:
+    These comprehensive notes and comments throughout the codebase are specifically 
+    designed to help AI assistants understand the game mechanics, rules, and 
+    implementation details without requiring lengthy explanations in new conversations.
+    
+    GAME OVERVIEW:
+    - Turn-based tactical game on a 6x7 grid
+    - Two phases: Placement Phase (2 turns each) and Battle Phase
+    - Players can move first (optional), but cannot move after attacking
+    - Only ONE piece can move per turn, and each piece can only move ONCE per turn
+    - Win condition: Defeat enemy General
+    
+    PIECE TYPES & STATS:
+    - General (♔): 3 HP, 1 damage, standard movement
+    - Cavalry (♘): 2 HP, 1 damage (2 on charge), can move 1-2 spaces (CANNOT jump over pieces)
+    - Heavy Infantry (⚔️): 3 HP, 1 damage, immune to cavalry charge
+    - Light Infantry (🗡️): 2 HP, 1 damage, standard movement
+    - Archer (🏹): 2 HP, 1 damage, 3 ammo, ranged attacks (4 space range limit)
+    
+    SPECIAL MECHANICS:
+    - Healing zones: Back rows heal pieces once per game
+    - Cavalry charge: 2x damage when attacking after 2-space move (path must be clear)
+    - Archer range: 4 space maximum range for ranged attacks (default enabled)
+    - Health display: Dot system showing individual hit points
+    
+    BATTLE PHASE TURN ORDER:
+    1. Can move ONE piece first (optional) - piece can only move ONCE
+    2. Can attack with any piece (optional)
+    3. Cannot move after attacking (moves must come before attacks)
+    4. End turn
+    
+    =============================================================================
+    -->
+    
+    <div class="game-container">
+        <h1>6x7 Board Game</h1>
+        
+        <div class="current-player" id="currentPlayer">Player 1's Turn</div>
+        <div class="phase-info" id="phaseInfo">Placement Phase - Turn 1/2</div>
+        <div class="placement-counter" id="placementCounter">Pieces placed this turn: 0/4</div>
+        <div class="turn-actions" id="turnActions"></div>
+        <div class="phase-requirement" id="phaseRequirement"></div>
+        <div class="placement-zones">
+            Player 1 (White): Top 3 rows | Player 2 (Black): Bottom 3 rows<br>
+            <button onclick="toggleAI()" id="aiToggle">Enable AI</button>
+        </div>
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="piece-counts">
+            <div class="player-pieces">
+                <h4>Player 1 (White) Remaining:</h4>
+                <div id="player1Counts"></div>
+            </div>
+            <div class="player-pieces">
+                <h4>Player 2 (Black) Remaining:</h4>
+                <div id="player2Counts"></div>
+            </div>
+        </div>
+        
+        <div class="piece-selector" id="pieceSelector"></div>
+        
+        <div class="board" id="board"></div>
+        
+        <button class="end-turn-btn" id="endTurnBtn" onclick="endTurn()">End Turn</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        /* 
+        =============================================================================
+        GAME STATE VARIABLES
+        =============================================================================
+        */
+        
+        // Core game state
+        let currentPlayer = 1;          // Current player (1 or 2)
+        let gamePhase = 'placement';    // 'placement' or 'battle'
+        let placementTurn = 1;          // Current placement turn (1 or 2)
+        let selectedPiece = null;       // Selected piece type during placement
+        let selectedCell = null;        // Selected cell coordinates {row, col}
+        let board = [];                 // 7x6 game board array
+        let piecesPlacedThisTurn = 0;   // Counter for placement phase
+        let gameEnded = false;          // Game over flag
+        
+        // Battle phase turn state - FIXED: Only one piece can move per turn
+        let hasMoved = false;           // Has player moved this turn?
+        let hasAttacked = false;        // Has player attacked this turn?
+        let movedPieceCoords = null;    // Coordinates of piece that moved this turn
+        
+        // Game options
+        let isAIEnabled = false;        // AI opponent enabled?
+        
+        /* 
+        =============================================================================
+        PIECE DEFINITIONS
+        =============================================================================
+        */
+        
+        // Piece type definitions with stats and figurine symbols
+        const pieceTypes = {
+            'General': { symbol: '👑', health: 3 },
+            'Cavalry': { symbol: '🐎', health: 2 },
+            'Heavy Infantry': { symbol: '🛡️', health: 3 },
+            'Light Infantry': { symbol: '⚔️', health: 2 },
+            'Archer': { symbol: '🏹', health: 2, ammo: 3 }
+        };
+        
+        // Starting piece counts for each player
+        const startingPieces = { 'General': 1, 'Cavalry': 2, 'Heavy Infantry': 2, 'Light Infantry': 2, 'Archer': 1 };
+        let player1Pieces = {...startingPieces};
+        let player2Pieces = {...startingPieces};
+        
+        /* 
+        =============================================================================
+        INITIALIZATION FUNCTIONS
+        =============================================================================
+        */
+        
+        function initGame() { 
+            createBoard(); 
+            updateUI(); 
+            updatePieceSelector(); 
+        }
+        
+        // Create empty 7x6 board
+        function createBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            board = [];
+            for (let row = 0; row < 7; row++) {
+                board[row] = [];
+                for (let col = 0; col < 6; col++) {
+                    board[row][col] = null;
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (row === 3) cell.classList.add('middle-row'); // Middle healing row
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    cell.onclick = () => cellClick(row, col);
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+        
+        /* 
+        =============================================================================
+        UI UPDATE FUNCTIONS
+        =============================================================================
+        */
+        
+        // Check if player can place piece in specific row (placement phase only)
+        function canPlaceInRow(player, row) { 
+            return player === 1 ? row <= 2 : row >= 4; 
+        }
+        
+        // Display error message with auto-clear
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            setTimeout(() => errorElement.textContent = '', 3000);
+        }
+        
+        // Main UI update function - handles all display elements
+        function updateUI() {
+            document.getElementById('currentPlayer').textContent = `Player ${currentPlayer}'s Turn`;
+            
+            if (gamePhase === 'placement') {
+                // Placement phase UI
+                document.getElementById('phaseInfo').textContent = `Placement Phase - Turn ${placementTurn}/2`;
+                document.getElementById('placementCounter').textContent = `Pieces placed this turn: ${piecesPlacedThisTurn}/4`;
+                document.getElementById('placementCounter').style.display = 'block';
+                document.getElementById('turnActions').style.display = 'none';
+                document.getElementById('phaseRequirement').style.display = 'none';
+                
+                const endTurnBtn = document.getElementById('endTurnBtn');
+                if (piecesPlacedThisTurn === 4) {
+                    endTurnBtn.disabled = false;
+                    endTurnBtn.textContent = 'End Turn';
+                } else {
+                    endTurnBtn.disabled = true;
+                    endTurnBtn.textContent = `End Turn (${4 - piecesPlacedThisTurn} more needed)`;
+                }
+            } else {
+                // Battle phase UI - FIXED: Only one piece can move per turn
+                document.getElementById('phaseInfo').textContent = 'Battle Phase';
+                document.getElementById('placementCounter').style.display = 'none';
+                document.getElementById('turnActions').style.display = 'block';
+                document.getElementById('turnActions').textContent = `Moved: ${hasMoved ? 'Yes' : 'No'} | Attacked: ${hasAttacked ? 'Yes' : 'No'}`;
+                
+                // Show phase requirement
+                const phaseReq = document.getElementById('phaseRequirement');
+                phaseReq.style.display = 'block';
+                if (!hasMoved && !hasAttacked) {
+                    phaseReq.textContent = 'You can move one piece first (optional) or attack directly';
+                    phaseReq.style.color = '#0066cc';
+                } else if (hasMoved && !hasAttacked) {
+                    phaseReq.textContent = 'You can now attack or end turn (no more moves allowed)';
+                    phaseReq.style.color = '#0066cc';
+                } else if (hasAttacked) {
+                    phaseReq.textContent = 'Turn complete - you can no longer move';
+                    phaseReq.style.color = '#009900';
+                }
+                
+                document.getElementById('endTurnBtn').disabled = false;
+                document.getElementById('endTurnBtn').textContent = 'End Turn';
+            }
+            updatePieceCounts();
+            renderBoard();
+        }
+        
+        // Update piece count display
+        function updatePieceCounts() {
+            document.getElementById('player1Counts').innerHTML = Object.entries(player1Pieces).map(([type, count]) => `${type}: ${count}`).join('<br>');
+            document.getElementById('player2Counts').innerHTML = Object.entries(player2Pieces).map(([type, count]) => `${type}: ${count}`).join('<br>');
+        }
+        
+        // Update piece selector buttons (placement phase only)
+        function updatePieceSelector() {
+            const selector = document.getElementById('pieceSelector');
+            selector.innerHTML = '';
+            if (gamePhase === 'placement') {
+                const pieces = currentPlayer === 1 ? player1Pieces : player2Pieces;
+                Object.entries(pieces).forEach(([type, count]) => {
+                    const button = document.createElement('div');
+                    button.className = `piece-button ${count === 0 ? 'disabled' : ''}`;
+                    button.textContent = `${pieceTypes[type].symbol} ${type} (${count})`;
+                    button.onclick = () => selectPieceType(type);
+                    if (selectedPiece === type) button.classList.add('selected');
+                    selector.appendChild(button);
+                });
+            }
+        }
+        
+        /* 
+        =============================================================================
+        PLACEMENT PHASE FUNCTIONS
+        =============================================================================
+        */
+        
+        // Select piece type for placement
+        function selectPieceType(type) {
+            if (gamePhase !== 'placement') return;
+            const pieces = currentPlayer === 1 ? player1Pieces : player2Pieces;
+            if (pieces[type] === 0) return;
+            selectedPiece = type;
+            selectedCell = null;
+            clearHighlights();
+            updatePieceSelector();
+        }
+        
+        // Main cell click handler - routes to appropriate phase function
+        function cellClick(row, col) {
+            if (gamePhase === 'placement') {
+                placePiece(row, col);
+            } else {
+                battlePhaseClick(row, col);
+            }
+        }
+        
+        // Place piece during placement phase
+        function placePiece(row, col) {
+            if (!selectedPiece) { 
+                showError('Please select a piece type first!'); 
+                return; 
+            }
+            if (board[row][col]) { 
+                showError('Cell is already occupied!'); 
+                return; 
+            }
+            if (piecesPlacedThisTurn >= 4) { 
+                showError('You can only place 4 pieces per turn!'); 
+                return; 
+            }
+            if (!canPlaceInRow(currentPlayer, row)) { 
+                showError(`Player ${currentPlayer} can only place pieces in ${currentPlayer === 1 ? 'top 3' : 'bottom 3'} rows!`); 
+                return; 
+            }
+            
+            const pieces = currentPlayer === 1 ? player1Pieces : player2Pieces;
+            if (pieces[selectedPiece] === 0) { 
+                showError('No more pieces of this type available!'); 
+                return; 
+            }
+            
+            // Create piece data object
+            const pieceData = {
+                type: selectedPiece,
+                player: currentPlayer,
+                health: pieceTypes[selectedPiece].health,
+                maxHealth: pieceTypes[selectedPiece].health,
+                hasBeenReplenished: false
+            };
+            
+            // Add ammo for archers
+            if (selectedPiece === 'Archer') {
+                pieceData.ammo = pieceTypes[selectedPiece].ammo;
+            }
+            
+            board[row][col] = pieceData;
+            pieces[selectedPiece]--;
+            piecesPlacedThisTurn++;
+            selectedPiece = null;
+            updateUI();
+            updatePieceSelector();
+        }
+        
+        /* 
+        =============================================================================
+        BATTLE PHASE FUNCTIONS - FIXED: Only one piece can move per turn
+        =============================================================================
+        */
+        
+        // Handle cell clicks during battle phase
+        function battlePhaseClick(row, col) {
+            const piece = board[row][col];
+            
+            if (!selectedCell) {
+                // Select a piece to act with
+                if (piece && piece.player === currentPlayer) {
+                    selectedCell = {row, col};
+                    highlightValidActions(row, col);
+                    renderBoard();
+                }
+            } else {
+                // Deselect if clicking same cell
+                if (selectedCell.row === row && selectedCell.col === col) {
+                    selectedCell = null;
+                    clearHighlights();
+                    renderBoard();
+                    return;
+                }
+                
+                const selectedPiece = board[selectedCell.row][selectedCell.col];
+                const canMoveHere = canMove(selectedPiece, selectedCell.row, selectedCell.col, row, col);
+                const canAttackHere = canAttack(selectedPiece, selectedCell.row, selectedCell.col, row, col);
+                
+                // FIXED: Only one piece can move per turn, and each piece can only move once
+                if (!piece && canMoveHere) {
+                    // Moving to empty cell
+                    if (!hasAttacked && !hasMoved) {
+                        movePiece(selectedCell.row, selectedCell.col, row, col);
+                        hasMoved = true;
+                        movedPieceCoords = {row, col}; // Track which piece moved
+                        showError('Move completed! You can still attack or end turn.');
+                    } else if (hasMoved) {
+                        showError('You can only move one piece per turn!');
+                    } else {
+                        showError('You cannot move after attacking!');
+                    }
+                } else if (piece && piece.player !== currentPlayer && canAttackHere) {
+                    // Attacking enemy piece
+                    if (!hasAttacked) {
+                        attackPiece(selectedCell.row, selectedCell.col, row, col);
+                        hasAttacked = true;
+                        showError('Attack completed! You can no longer move this turn.');
+                    } else {
+                        showError('You can only attack once per turn!');
+                    }
+                } else {
+                    showError('Invalid move or attack!');
+                }
+                
+                selectedCell = null;
+                clearHighlights();
+                updateUI();
+            }
+        }
+        
+        /* 
+        =============================================================================
+        MOVEMENT & ATTACK VALIDATION - FIXED: Cavalry cannot jump over pieces
+        =============================================================================
+        */
+        
+        // FIXED: Check if piece can move to target location (cavalry cannot jump over pieces)
+        function canMove(piece, fromRow, fromCol, toRow, toCol) {
+            if (piece.type === 'Cavalry') {
+                // Cavalry can move 1-2 spaces in cardinal directions, but cannot jump over pieces
+                const rowDiff = Math.abs(fromRow - toRow);
+                const colDiff = Math.abs(fromCol - toCol);
+                
+                // Must be in cardinal direction
+                if (!((rowDiff <= 2 && colDiff === 0) || (rowDiff === 0 && colDiff <= 2))) {
+                    return false;
+                }
+                
+                // Check path is clear (cannot jump over pieces)
+                if (rowDiff > 0) {
+                    // Moving vertically
+                    const direction = toRow > fromRow ? 1 : -1;
+                    for (let i = 1; i < rowDiff; i++) {
+                        if (board[fromRow + (i * direction)][fromCol]) {
+                            return false; // Path blocked
+                        }
+                    }
+                } else if (colDiff > 0) {
+                    // Moving horizontally
+                    const direction = toCol > fromCol ? 1 : -1;
+                    for (let i = 1; i < colDiff; i++) {
+                        if (board[fromRow][fromCol + (i * direction)]) {
+                            return false; // Path blocked
+                        }
+                    }
+                }
+                return true;
+            } else {
+                // All other pieces move 1 space in cardinal directions
+                const distance = Math.abs(fromRow - toRow) + Math.abs(fromCol - toCol);
+                return distance === 1;
+            }
+        }
+        
+        // Check if piece can attack target location
+        function canAttack(piece, fromRow, fromCol, toRow, toCol) {
+            const target = board[toRow][toCol];
+            if (!target || target.player === piece.player) return false;
+            
+            if (piece.type === 'Archer') {
+                const distance = Math.abs(fromRow - toRow) + Math.abs(fromCol - toCol);
+                // Archers can always melee attack adjacent enemies
+                if (distance === 1) return true;
+                // Ranged attacks require ammo and are limited to 4 spaces
+                if (piece.ammo > 0 && (fromRow === toRow || fromCol === toCol)) {
+                    if (distance > 4) return false; // Always apply 4-space limit
+                    return true;
+                }
+                return false;
+            } else {
+                // All other pieces can only attack adjacent enemies
+                const distance = Math.abs(fromRow - toRow) + Math.abs(fromCol - toCol);
+                return distance === 1;
+            }
+        }
+        
+        /* 
+        =============================================================================
+        MOVEMENT & ATTACK EXECUTION
+        =============================================================================
+        */
+        
+        // Execute piece movement
+        function movePiece(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            
+            // Handle cavalry charge direction tracking
+            if (piece.type === 'Cavalry') {
+                const distance = Math.abs(fromRow - toRow) + Math.abs(fromCol - toCol);
+                if (distance === 2) {
+                    // Store charge direction for bonus damage
+                    piece.chargeDirection = {
+                        row: toRow - fromRow,
+                        col: toCol - fromCol
+                    };
+                    // Normalize to unit vectors
+                    if (piece.chargeDirection.row !== 0) {
+                        piece.chargeDirection.row = piece.chargeDirection.row > 0 ? 1 : -1;
+                    }
+                    if (piece.chargeDirection.col !== 0) {
+                        piece.chargeDirection.col = piece.chargeDirection.col > 0 ? 1 : -1;
+                    }
+                } else {
+                    piece.chargeDirection = null;
+                }
+            }
+            
+            // Move piece to new location
+            board[toRow][toCol] = piece;
+            board[fromRow][fromCol] = null;
+            
+            // Check for healing in back rows
+            checkForHealing(piece, toRow);
+        }
+        
+        // Check if piece should be healed (back row healing)
+        function checkForHealing(piece, row) {
+            const shouldHeal = (piece.player === 1 && row === 6) || (piece.player === 2 && row === 0);
+            if (shouldHeal && !piece.hasBeenReplenished) {
+                piece.health = piece.maxHealth;
+                piece.hasBeenReplenished = true;
+                if (piece.type === 'Archer') {
+                    piece.ammo = pieceTypes['Archer'].ammo;
+                }
+                const playerName = piece.player === 1 ? 'Player 1' : 'Player 2';
+                showError(`${playerName}'s ${piece.type} has been replenished!`);
+            }
+        }
+        
+        // Execute attack between pieces
+        function attackPiece(attackerRow, attackerCol, targetRow, targetCol) {
+            if (gameEnded) return;
+            const attacker = board[attackerRow][attackerCol];
+            const target = board[targetRow][targetCol];
+            if (!target) return;
+            
+            let damage = 1; // Base damage
+            const distance = Math.abs(attackerRow - targetRow) + Math.abs(attackerCol - targetCol);
+            
+            // Cavalry charge bonus damage
+            if (attacker.type === 'Cavalry' && attacker.chargeDirection && distance === 1 && target.type !== 'Heavy Infantry') {
+                // Check if attack is in same direction as charge
+                const attackDirection = {
+                    row: targetRow - attackerRow,
+                    col: targetCol - attackerCol
+                };
+                
+                if (attackDirection.row === attacker.chargeDirection.row && 
+                    attackDirection.col === attacker.chargeDirection.col) {
+                    damage = 2;
+                    showError('Cavalry charge! Double damage!');
+                }
+            }
+            
+            // Consume archer ammo for ranged attacks
+            if (attacker.type === 'Archer' && distance > 1) {
+                attacker.ammo--;
+            }
+            
+            const wasGeneral = target.type === 'General';
+            target.health -= damage;
+            
+            // Remove piece if health depleted
+            if (target.health <= 0) {
+                board[targetRow][targetCol] = null;
+                if (wasGeneral) {
+                    // Game over - General defeated
+                    gameEnded = true;
+                    const winner = attacker.player;
+                    setTimeout(() => {
+                        alert(`Player ${winner} wins! Enemy General defeated!`);
+                        if (confirm('Play again?')) location.reload();
+                    }, 100);
+                }
+            }
+        }
+        
+        /* 
+        =============================================================================
+        VISUAL HIGHLIGHTING FUNCTIONS
+        =============================================================================
+        */
+        
+        // Highlight valid moves and attacks for selected piece
+        function highlightValidActions(row, col) {
+            clearHighlights();
+            const piece = board[row][col];
+            
+            // Highlight valid moves (only if haven't attacked yet and haven't moved yet)
+            if (!hasAttacked && !hasMoved) {
+                if (piece.type === 'Cavalry') {
+                    // FIXED: Cavalry movement highlighting - cannot jump over pieces
+                    const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+                    directions.forEach(([dr, dc]) => {
+                        for (let i = 1; i <= 2; i++) {
+                            const newRow = row + (dr * i);
+                            const newCol = col + (dc * i);
+                            if (newRow >= 0 && newRow < 7 && newCol >= 0 && newCol < 6) {
+                                if (board[newRow][newCol]) {
+                                    break; // Path blocked, stop checking further
+                                }
+                                document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`).classList.add('highlighted');
+                            }
+                        }
+                    });
+                } else {
+                    // Standard movement highlighting
+                    const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+                    directions.forEach(([dr, dc]) => {
+                        const newRow = row + dr;
+                        const newCol = col + dc;
+                        if (newRow >= 0 && newRow < 7 && newCol >= 0 && newCol < 6 && !board[newRow][newCol]) {
+                            document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`).classList.add('highlighted');
+                        }
+                    });
+                }
+            }
+            
+            // Highlight valid attacks (available anytime if haven't attacked yet)
+            if (!hasAttacked) {
+                highlightAttackTargets(piece, row, col);
+            }
+        }
+        
+        // Highlight attack targets for a piece
+        function highlightAttackTargets(piece, row, col) {
+            if (piece.type === 'Archer') {
+                // Archer attack highlighting
+                const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+                
+                // Adjacent melee attacks
+                directions.forEach(([dr, dc]) => {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    if (newRow >= 0 && newRow < 7 && newCol >= 0 && newCol < 6) {
+                        const target = board[newRow][newCol];
+                        if (target && target.player !== piece.player) {
+                            const cell = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`);
+                            cell.classList.add('attack-range');
+                        }
+                    }
+                });
+                
+                // Ranged attacks (if has ammo) - Always 4-space limit
+                if (piece.ammo > 0) {
+                    // Horizontal ranged attacks
+                    for (let c = 0; c < 6; c++) {
+                        if (c !== col && board[row][c] && board[row][c].player !== piece.player) {
+                            if (Math.abs(col - c) > 4) continue; // Always apply 4-space limit
+                            const cell = document.querySelector(`[data-row="${row}"][data-col="${c}"]`);
+                            cell.classList.add('attack-range');
+                        }
+                    }
+                    // Vertical ranged attacks
+                    for (let r = 0; r < 7; r++) {
+                        if (r !== row && board[r][col] && board[r][col].player !== piece.player) {
+                            if (Math.abs(row - r) > 4) continue; // Always apply 4-space limit
+                            const cell = document.querySelector(`[data-row="${r}"][data-col="${col}"]`);
+                            cell.classList.add('attack-range');
+                        }
+                    }
+                }
+            } else {
+                // Standard melee attack highlighting
+                const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+                directions.forEach(([dr, dc]) => {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    if (newRow >= 0 && newRow < 7 && newCol >= 0 && newCol < 6) {
+                        const target = board[newRow][newCol];
+                        if (target && target.player !== piece.player) {
+                            const cell = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`);
+                            cell.classList.add('attack-range');
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Clear all visual highlights
+        function clearHighlights() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('highlighted', 'selected', 'attack-range');
+            });
+        }
+        
+        /* 
+        =============================================================================
+        BOARD RENDERING FUNCTION
+        =============================================================================
+        */
+        
+        // Render all pieces on the board with health dots, ammo, etc.
+        function renderBoard() {
+            for (let row = 0; row < 7; row++) {
+                for (let col = 0; col < 6; col++) {
+                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    const piece = board[row][col];
+                    
+                    // Highlight selected cell
+                    if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+                        cell.classList.add('selected');
+                    }
+                    
+                    if (piece) {
+                        // Create health dots display
+                        let healthDotsHTML = '<div class="health-dots">';
+                        for (let i = 0; i < piece.maxHealth; i++) {
+                            const dotClass = i < piece.health ? 'healthy' : 'damaged';
+                            healthDotsHTML += `<div class="health-dot ${dotClass}"></div>`;
+                        }
+                        healthDotsHTML += '</div>';
+                        
+                        // Add ammo counter for archers
+                        let ammoDisplay = '';
+                        if (piece.type === 'Archer') {
+                            ammoDisplay = `<div class="ammo-counter">${piece.ammo}</div>`;
+                        }
+                        
+                        // Add replenished indicator
+                        let replenishedIndicator = '';
+                        if (piece.hasBeenReplenished) {
+                            replenishedIndicator = '<div class="replenished-indicator">R</div>';
+                        }
+                        
+                        // Determine figurine class based on piece type
+                        let figurineClass = 'figurine';
+                        switch(piece.type) {
+                            case 'General':
+                                figurineClass += ' general-figurine';
+                                break;
+                            case 'Cavalry':
+                                figurineClass += ' cavalry-figurine';
+                                break;
+                            case 'Heavy Infantry':
+                                figurineClass += ' heavy-infantry-figurine';
+                                break;
+                            case 'Light Infantry':
+                                figurineClass += ' light-infantry-figurine';
+                                break;
+                            case 'Archer':
+                                figurineClass += ' archer-figurine';
+                                break;
+                        }
+                        
+                        // Render piece with figurine styling
+                        cell.innerHTML = `
+                            <div class="piece player${piece.player}">
+                                <div class="${figurineClass}">${pieceTypes[piece.type].symbol}</div>
+                                ${healthDotsHTML}
+                                ${ammoDisplay}
+                                ${replenishedIndicator}
+                            </div>
+                        `;
+                    } else {
+                        cell.innerHTML = '';
+                    }
+                }
+            }
+        }
+        
+        /* 
+        =============================================================================
+        TURN MANAGEMENT FUNCTIONS
+        =============================================================================
+        */
+        
+        // End current player's turn
+        function endTurn() {
+            if (gameEnded) return;
+            
+            // Validate turn completion for placement phase
+            if (gamePhase === 'placement' && piecesPlacedThisTurn !== 4) {
+                showError('You must place exactly 4 pieces before ending your turn!');
+                return;
+            }
+            
+            // Reset turn state
+            selectedPiece = null;
+            selectedCell = null;
+            clearHighlights();
+            hasMoved = false;
+            hasAttacked = false;
+            movedPieceCoords = null; // Reset moved piece tracking
+            
+            // Clear cavalry charge directions at end of turn
+            for (let row = 0; row < 7; row++) {
+                for (let col = 0; col < 6; col++) {
+                    if (board[row][col] && board[row][col].type === 'Cavalry') {
+                        board[row][col].chargeDirection = null;
+                    }
+                }
+            }
+            
+            // Handle phase transitions
+            if (gamePhase === 'placement') {
+                piecesPlacedThisTurn = 0;
+                if (currentPlayer === 1) {
+                    currentPlayer = 2;
+                } else {
+                    currentPlayer = 1;
+                    placementTurn++;
+                    if (placementTurn > 2) {
+                        gamePhase = 'battle';
+                        showError('Battle Phase begins! You can move one piece first (optional) or attack directly!');
+                    }
+                }
+            } else {
+                // Battle phase - simple player switch
+                currentPlayer = currentPlayer === 1 ? 2 : 1;
+            }
+            
+            updateUI();
+            updatePieceSelector();
+            
+            // Trigger AI turn if enabled
+            if (isAIEnabled && currentPlayer === 2 && !gameEnded) {
+                setTimeout(aiTurn, 1000);
+            }
+        }
+        
+        /* 
+        =============================================================================
+        GAME OPTION TOGGLES
+        =============================================================================
+        */
+        
+        // Toggle AI opponent
+        function toggleAI() {
+            isAIEnabled = !isAIEnabled;
+            document.getElementById('aiToggle').textContent = isAIEnabled ? 'Disable AI' : 'Enable AI';
+            if (isAIEnabled && currentPlayer === 2 && !gameEnded) {
+                setTimeout(aiTurn, 1000);
+            }
+        }
+        
+        /* 
+        =============================================================================
+        AI FUNCTIONS - FIXED: Follow new movement rules
+        =============================================================================
+        */
+        
+        // Main AI turn function
+        function aiTurn() {
+            if (gameEnded || currentPlayer !== 2 || !isAIEnabled) return;
+            if (gamePhase === 'placement') {
+                aiPlacementTurn();
+            } else {
+                aiBattleTurn();
+            }
+        }
+        
+        // AI placement phase behavior
+        function aiPlacementTurn() {
+            const piecesToPlace = 4 - piecesPlacedThisTurn;
+            for (let i = 0; i < piecesToPlace; i++) {
+                const availablePieces = Object.entries(player2Pieces).filter(([type, count]) => count > 0);
+                if (availablePieces.length === 0) break;
+                
+                const [pieceType] = availablePieces[Math.floor(Math.random() * availablePieces.length)];
+                
+                // Find valid placement positions
+                const validPositions = [];
+                for (let row = 4; row < 7; row++) {
+                    for (let col = 0; col < 6; col++) {
+                        if (!board[row][col]) {
+                            validPositions.push({row, col});
+                        }
+                    }
+                }
+                
+                if (validPositions.length > 0) {
+                    const pos = validPositions[Math.floor(Math.random() * validPositions.length)];
+                    const pieceData = {
+                        type: pieceType,
+                        player: 2,
+                        health: pieceTypes[pieceType].health,
+                        maxHealth: pieceTypes[pieceType].health,
+                        hasBeenReplenished: false
+                    };
+                    
+                    if (pieceType === 'Archer') {
+                        pieceData.ammo = pieceTypes[pieceType].ammo;
+                    }
+                    
+                    board[pos.row][pos.col] = pieceData;
+                    player2Pieces[pieceType]--;
+                    piecesPlacedThisTurn++;
+                }
+            }
+            setTimeout(endTurn, 500);
+        }
+        
+        // AI battle phase behavior - FIXED: Follow new movement rules
+        function aiBattleTurn() {
+            const aiPieces = [];
+            for (let row = 0; row < 7; row++) {
+                for (let col = 0; col < 6; col++) {
+                    if (board[row][col] && board[row][col].player === 2) {
+                        aiPieces.push({row, col, piece: board[row][col]});
+                    }
+                }
+            }
+            
+            if (aiPieces.length === 0) {
+                setTimeout(endTurn, 1000);
+                return;
+            }
+            
+            // AI can choose to move first (optional) or attack directly
+            const shouldMove = Math.random() > 0.3; // 70% chance to move first
+            let moved = false;
+            
+            if (shouldMove) {
+                // Step 1: Try to move one piece
+                for (const {row, col, piece} of aiPieces) {
+                    const moves = findValidMoves(piece, row, col);
+                    if (moves.length > 0) {
+                        const move = moves[Math.floor(Math.random() * moves.length)];
+                        movePiece(row, col, move.row, move.col);
+                        hasMoved = true;
+                        moved = true;
+                        break; // Only move one piece per turn
+                    }
+                }
+            }
+            
+            // Step 2: Look for attack opportunities
+            setTimeout(() => {
+                // Update piece positions if moved
+                const currentAiPieces = [];
+                for (let row = 0; row < 7; row++) {
+                    for (let col = 0; col < 6; col++) {
+                        if (board[row][col] && board[row][col].player === 2) {
+                            currentAiPieces.push({row, col, piece: board[row][col]});
+                        }
+                    }
+                }
+                
+                for (const {row, col, piece} of currentAiPieces) {
+                    const targets = findAttackTargets(piece, row, col);
+                    if (targets.length > 0) {
+                        // Prioritize attacking the General
+                        const generalTarget = targets.find(t => board[t.row][t.col].type === 'General');
+                        const target = generalTarget || targets[Math.floor(Math.random() * targets.length)];
+                        attackPiece(row, col, target.row, target.col);
+                        hasAttacked = true;
+                        break;
+                    }
+                }
+                setTimeout(endTurn, 1000);
+            }, moved ? 500 : 100);
+        }
+        
+        // Find valid attack targets for AI piece
+        function findAttackTargets(piece, row, col) {
+            const targets = [];
+            
+            // Archer ranged attacks with 4-space limit
+            if (piece.type === 'Archer' && piece.ammo > 0) {
+                // Horizontal attacks
+                for (let c = 0; c < 6; c++) {
+                    if (c !== col && board[row][c] && board[row][c].player !== piece.player) {
+                        if (Math.abs(col - c) > 4) continue; // Always apply 4-space limit
+                        targets.push({row, col: c});
+                    }
+                }
+                // Vertical attacks
+                for (let r = 0; r < 7; r++) {
+                    if (r !== row && board[r][col] && board[r][col].player !== piece.player) {
+                        if (Math.abs(row - r) > 4) continue; // Always apply 4-space limit
+                        targets.push({row: r, col});
+                    }
+                }
+            }
+            
+            // Adjacent attacks for all pieces
+            const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+            for (const [dr, dc] of directions) {
+                const newRow = row + dr;
+                const newCol = col + dc;
+                if (newRow >= 0 && newRow < 7 && newCol >= 0 && newCol < 6) {
+                    const target = board[newRow][newCol];
+                    if (target && target.player !== piece.player) {
+                        targets.push({row: newRow, col: newCol});
+                    }
+                }
+            }
+            return targets;
+        }
+        
+        // FIXED: Find valid moves for AI piece (cavalry cannot jump over pieces)
+        function findValidMoves(piece, row, col) {
+            const moves = [];
+            if (piece.type === 'Cavalry') {
+                // FIXED: Cavalry movement - cannot jump over pieces
+                const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+                for (const [dr, dc] of directions) {
+                    for (let i = 1; i <= 2; i++) {
+                        const newRow = row + (dr * i);
+                        const newCol = col + (dc * i);
+                        if (newRow >= 0 && newRow < 7 && newCol >= 0 && newCol < 6) {
+                            if (board[newRow][newCol]) {
+                                break; // Path blocked, stop checking further
+                            }
+                            moves.push({row: newRow, col: newCol});
+                        }
+                    }
+                }
+            } else {
+                // Standard movement
+                const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+                for (const [dr, dc] of directions) {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    if (newRow >= 0 && newRow < 7 && newCol >= 0 && newCol < 6 && !board[newRow][newCol]) {
+                        moves.push({row: newRow, col: newCol});
+                    }
+                }
+            }
+            return moves;
+        }
+        
+        /* 
+        =============================================================================
+        GAME INITIALIZATION
+        =============================================================================
+        */
+        
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
