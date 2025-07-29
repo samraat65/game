@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ancient Empires - Multiplayer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 1000px; /* Increased to accommodate team indicators */
+        }
+        
+        .connection-panel {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .connection-panel input, .connection-panel button {
+            margin: 5px;
+            padding: 8px;
+            font-size: 14px;
+        }
+        
+        .connection-panel button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .connection-panel button:hover {
+            background-color: #45a049;
+        }
+        
+        .status-panel {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        
+        /* MODIFICATION: Added game layout container to position board and team indicators side by side */
+        .game-layout {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(6, 70px);
+            grid-template-rows: repeat(7, 70px);
+            gap: 2px;
+            border: 2px solid #333;
+            background-color: #8B4513;
+            padding: 10px;
+        }
+        
+        /* MODIFICATION: Added team indicators styling */
+        .team-indicators {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .team-box {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 3px solid;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 120px;
+            justify-content: space-between;
+        }
+        
+        .team-box.blue-team {
+            background-color: #E3F2FD;
+            border-color: #2196F3;
+            color: #1976D2;
+        }
+        
+        .team-box.red-team {
+            background-color: #FFEBEE;
+            border-color: #F44336;
+            color: #D32F2F;
+        }
+        
+        .turn-arrow {
+            font-size: 20px;
+            font-weight: bold;
+            transition: opacity 0.3s ease;
+        }
+        
+        .turn-arrow.active {
+            opacity: 1;
+        }
+        
+        .turn-arrow.inactive {
+            opacity: 0.2;
+        }
+        
+        .cell {
+            width: 70px;
+            height: 70px;
+            background-color: #DEB887;
+            border: 1px solid #8B4513;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .cell.middle-row {
+            background-color: #B8860B;
+        }
+        
+        .cell.highlighted {
+            background-color: #90EE90;
+        }
+        
+        .cell.selected {
+            background-color: #FFD700;
+        }
+        
+        .cell.attack-range {
+            background-color: #FFB6C1;
+        }
+        
+        .piece {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .figurine {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            border-radius: 50%;
+            border: 2px solid;
+            position: relative;
+        }
+        
+        .player1 .figurine {
+            background: linear-gradient(145deg, #4A90E2, #357EC7);
+            border-color: #2E5C8A;
+            color: #FFFFFF;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+        
+        .player2 .figurine {
+            background: linear-gradient(145deg, #E74C3C, #C0392B);
+            border-color: #A93226;
+            color: #FFFFFF;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+        
+        /* MODIFICATION: Updated General styling to match team colors instead of gold */
+        .player1 .general-figurine {
+            border-radius: 8px;
+            font-size: 24px;
+            background: linear-gradient(145deg, #2196F3, #1976D2) !important;
+            border-color: #1565C0 !important;
+            color: #FFFFFF !important;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;
+        }
+        
+        .player2 .general-figurine {
+            border-radius: 8px;
+            font-size: 24px;
+            background: linear-gradient(145deg, #F44336, #D32F2F) !important;
+            border-color: #C62828 !important;
+            color: #FFFFFF !important;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;
+        }
+        
+        .health-dots {
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 2px;
+        }
+        
+        .health-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 1px solid #333;
+        }
+        
+        .health-dot.healthy {
+            background-color: #44ff44;
+        }
+        
+        .health-dot.damaged {
+            background-color: #333333;
+        }
+        
+        .ammo-counter {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background-color: #333;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .piece-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .piece-button {
+            padding: 8px 12px;
+            border: 2px solid #333;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        
+        .piece-button.selected {
+            background-color: #FFD700;
+        }
+        
+        .piece-button.disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        .end-turn-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        .end-turn-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .end-turn-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .game-messages {
+            max-height: 150px;
+            overflow-y: auto;
+            text-align: left;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .message {
+            margin: 2px 0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .message.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .message.success {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .message.victory {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            font-weight: bold;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Ancient Empires - Multiplayer</h1>
+        
+        <!-- Connection Panel -->
+        <div class="connection-panel" id="connectionPanel">
+            <h3>Join Game</h3>
+            <input type="text" id="roomIdInput" placeholder="Room ID (e.g., room123)" value="room123">
+            <input type="text" id="playerNameInput" placeholder="Your Name" value="">
+            <button onclick="joinGame()">Join Game</button>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                Share the same Room ID with your friend to play together!
+            </div>
+        </div>
+        
+        <!-- Status Panel -->
+        <div class="status-panel hidden" id="statusPanel">
+            <div id="connectionStatus">Connecting...</div>
+            <div id="gameInfo"></div>
+            <div id="playerList"></div>
+        </div>
+        
+        <!-- Game Messages -->
+        <div class="game-messages hidden" id="gameMessages"></div>
+        
+        <!-- Game Controls -->
+        <div class="hidden" id="gameArea">
+            <div id="currentPlayer">Waiting for players...</div>
+            <div id="phaseInfo"></div>
+            <div id="placementCounter"></div>
+            <div id="turnActions"></div>
+            
+            <div class="piece-selector" id="pieceSelector"></div>
+            
+            <!-- MODIFICATION: Added game layout container with board and team indicators -->
+            <div class="game-layout">
+                <div class="board" id="board"></div>
+                
+                <!-- MODIFICATION: Added team indicators on the right side -->
+                <div class="team-indicators">
+                    <div class="team-box blue-team">
+                        <span>Blue Team</span>
+                        <span class="turn-arrow" id="blueArrow">→</span>
+                    </div>
+                    <div class="team-box red-team">
+                        <span>Red Team</span>
+                        <span class="turn-arrow" id="redArrow">→</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="end-turn-btn" id="endTurnBtn" onclick="endTurn()" disabled>End Turn</button>
+        </div>
+    </div>
+
+    <!-- Socket.io client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Socket.io connection
+        let socket = null;
+        let gameState = null;
+        let myPlayerNumber = null;
+        let selectedPiece = null;
+        
+        // Piece type definitions
+        const pieceTypes = {
+            'General': { symbol: '👑', health: 3 },
+            'Cavalry': { symbol: '🐎', health: 2 },
+            'Heavy Infantry': { symbol: '🛡️', health: 3 },
+            'Light Infantry': { symbol: '⚔️', health: 2 },
+            'Archer': { symbol: '🏹', health: 2, ammo: 3 }
+        };
+        
+        function joinGame() {
+            const roomId = document.getElementById('roomIdInput').value.trim();
+            const playerName = document.getElementById('playerNameInput').value.trim();
+            
+            if (!roomId || !playerName) {
+                alert('Please enter both Room ID and your name!');
+                return;
+            }
+            
+            // Connect to server
+            socket = io();
+            
+            socket.on('connect', () => {
+                document.getElementById('connectionStatus').textContent = 'Connected to server';
+                socket.emit('joinRoom', { roomId, playerName });
+            });
+            
+            socket.on('playerAssigned', (data) => {
+                myPlayerNumber = data.playerNumber;
+                document.getElementById('connectionPanel').classList.add('hidden');
+                document.getElementById('statusPanel').classList.remove('hidden');
+                document.getElementById('gameMessages').classList.remove('hidden');
+                document.getElementById('gameArea').classList.remove('hidden');
+                
+                addMessage(`You are Player ${data.playerNumber} (${data.playerName})`, 'success');
+            });
+            
+            socket.on('joinedAsSpectator', () => {
+                document.getElementById('connectionPanel').classList.add('hidden');
+                document.getElementById('statusPanel').classList.remove('hidden');
+                document.getElementById('gameMessages').classList.remove('hidden');
+                document.getElementById('gameArea').classList.remove('hidden');
+                
+                addMessage('You joined as a spectator', 'info');
+            });
+            
+            socket.on('gameStateUpdate', (state) => {
+                gameState = state;
+                updateUI();
+            });
+            
+            socket.on('gameMessage', (data) => {
+                addMessage(data.message, data.type);
+            });
+            
+            socket.on('playerListUpdate', (data) => {
+                const playerListDiv = document.getElementById('playerList');
+                const playerNames = data.players.map(p => `Player ${p.playerNumber}: ${p.name}`).join(' | ');
+                playerListDiv.textContent = `Players: ${playerNames}${data.spectatorCount > 0 ? ` | Spectators: ${data.spectatorCount}` : ''}`;
+            });
+            
+            socket.on('error', (message) => {
+                alert('Error: ' + message);
+            });
+            
+            socket.on('disconnect', () => {
+                addMessage('Disconnected from server', 'error');
+            });
+        }
+        
+        function addMessage(message, type = 'info') {
+            const messagesDiv = document.getElementById('gameMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function updateUI() {
+            if (!gameState) return;
+            
+            // Update game info
+            const currentPlayerName = gameState.playerNames[gameState.currentPlayer] || `Player ${gameState.currentPlayer}`;
+            document.getElementById('currentPlayer').textContent = `${currentPlayerName}'s Turn`;
+            
+            // MODIFICATION: Update team turn indicators
+            updateTeamIndicators();
+            
+            if (gameState.gamePhase === 'waiting') {
+                document.getElementById('phaseInfo').textContent = 'Waiting for players...';
+                document.getElementById('gameInfo').textContent = 'Waiting for another player to join';
+            } else if (gameState.gamePhase === 'placement') {
+                document.getElementById('phaseInfo').textContent = `Placement Phase - Turn ${gameState.placementTurn}/2`;
+                document.getElementById('placementCounter').textContent = `Pieces placed this turn: ${gameState.piecesPlacedThisTurn}/4`;
+                document.getElementById('gameInfo').textContent = 'Place 4 pieces in your territory';
+                updatePieceSelector();
+            } else if (gameState.gamePhase === 'battle') {
+                document.getElementById('phaseInfo').textContent = 'Battle Phase';
+                document.getElementById('placementCounter').textContent = '';
+                document.getElementById('turnActions').textContent = `Moved: ${gameState.hasMoved ? 'Yes' : 'No'} | Attacked: ${gameState.hasAttacked ? 'Yes' : 'No'}`;
+                document.getElementById('gameInfo').textContent = 'Move first, then attack!';
+                document.getElementById('pieceSelector').innerHTML = '';
+            }
+            
+            // Update end turn button
+            const endTurnBtn = document.getElementById('endTurnBtn');
+            const isMyTurn = myPlayerNumber === gameState.currentPlayer;
+            
+            if (gameState.gamePhase === 'placement') {
+                endTurnBtn.disabled = !isMyTurn || gameState.piecesPlacedThisTurn !== 4;
+                endTurnBtn.textContent = gameState.piecesPlacedThisTurn === 4 ? 'End Turn' : `End Turn (${4 - gameState.piecesPlacedThisTurn} more needed)`;
+            } else {
+                endTurnBtn.disabled = !isMyTurn;
+                endTurnBtn.textContent = 'End Turn';
+            }
+            
+            renderBoard();
+        }
+        
+        // MODIFICATION: Added function to update team turn indicators
+        function updateTeamIndicators() {
+            const blueArrow = document.getElementById('blueArrow');
+            const redArrow = document.getElementById('redArrow');
+            
+            if (gameState.currentPlayer === 1) {
+                // Blue team's turn (Player 1)
+                blueArrow.classList.remove('inactive');
+                blueArrow.classList.add('active');
+                redArrow.classList.remove('active');
+                redArrow.classList.add('inactive');
+            } else {
+                // Red team's turn (Player 2)
+                redArrow.classList.remove('inactive');
+                redArrow.classList.add('active');
+                blueArrow.classList.remove('active');
+                blueArrow.classList.add('inactive');
+            }
+        }
+        
+        function updatePieceSelector() {
+            if (gameState.gamePhase !== 'placement') return;
+            
+            const selector = document.getElementById('pieceSelector');
+            selector.innerHTML = '';
+            
+            if (myPlayerNumber === gameState.currentPlayer) {
+                const pieces = myPlayerNumber === 1 ? gameState.player1Pieces : gameState.player2Pieces;
+                Object.entries(pieces).forEach(([type, count]) => {
+                    const button = document.createElement('div');
+                    button.className = `piece-button ${count === 0 ? 'disabled' : ''}`;
+                    button.textContent = `${pieceTypes[type].symbol} ${type} (${count})`;
+                    button.onclick = () => selectPieceType(type);
+                    if (selectedPiece === type) button.classList.add('selected');
+                    selector.appendChild(button);
+                });
+            }
+        }
+        
+        function selectPieceType(type) {
+            if (gameState.gamePhase !== 'placement' || myPlayerNumber !== gameState.currentPlayer) return;
+            
+            const pieces = myPlayerNumber === 1 ? gameState.player1Pieces : gameState.player2Pieces;
+            if (pieces[type] === 0) return;
+            
+            selectedPiece = type;
+            updatePieceSelector();
+        }
+        
+        function renderBoard() {
+            const boardElement = document.getElementById('board');
+            
+            // Create board if it doesn't exist
+            if (boardElement.children.length === 0) {
+                for (let row = 0; row < 7; row++) {
+                    for (let col = 0; col < 6; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        if (row === 3) cell.classList.add('middle-row');
+                        cell.dataset.row = row;
+                        cell.dataset.col = col;
+                        cell.onclick = () => cellClick(row, col);
+                        boardElement.appendChild(cell);
+                    }
+                }
+            }
+            
+            // Clear all cells first
+            Array.from(boardElement.children).forEach(cell => {
+                cell.classList.remove('selected');
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                const piece = gameState.board[row][col];
+                
+                // Highlight selected cell
+                if (gameState.selectedCell && gameState.selectedCell.row === row && gameState.selectedCell.col === col) {
+                    cell.classList.add('selected');
+                }
+                
+                if (piece) {
+                    // Create health dots
+                    let healthDotsHTML = '<div class="health-dots">';
+                    for (let i = 0; i < piece.maxHealth; i++) {
+                        const dotClass = i < piece.health ? 'healthy' : 'damaged';
+                        healthDotsHTML += `<div class="health-dot ${dotClass}"></div>`;
+                    }
+                    healthDotsHTML += '</div>';
+                    
+                    // Add ammo counter for archers
+                    let ammoDisplay = '';
+                    if (piece.type === 'Archer') {
+                        ammoDisplay = `<div class="ammo-counter">${piece.ammo}</div>`;
+                    }
+                    
+                    // MODIFICATION: Determine figurine class with team-specific General styling
+                    let figurineClass = 'figurine';
+                    if (piece.type === 'General') {
+                        figurineClass += ' general-figurine';
+                    }
+                    
+                    cell.innerHTML = `
+                        <div class="piece player${piece.player}">
+                            <div class="${figurineClass}">${pieceTypes[piece.type].symbol}</div>
+                            ${healthDotsHTML}
+                            ${ammoDisplay}
+                        </div>
+                    `;
+                } else {
+                    cell.innerHTML = '';
+                }
+            });
+        }
+        
+        function cellClick(row, col) {
+            if (!socket || !gameState || myPlayerNumber !== gameState.currentPlayer) return;
+            
+            if (gameState.gamePhase === 'placement') {
+                if (selectedPiece) {
+                    socket.emit('gameAction', {
+                        type: 'placePiece',
+                        pieceType: selectedPiece,
+                        row: row,
+                        col: col
+                    });
+                    selectedPiece = null;
+                    updatePieceSelector();
+                }
+            } else if (gameState.gamePhase === 'battle') {
+                socket.emit('gameAction', {
+                    type: 'selectCell',
+                    row: row,
+                    col: col
+                });
+            }
+        }
+        
+        function endTurn() {
+            if (!socket || myPlayerNumber !== gameState.currentPlayer) return;
+            
+            socket.emit('gameAction', {
+                type: 'endTurn'
+            });
+        }
+        
+        // Initialize game
+        document.getElementById('playerNameInput').value = 'Player' + Math.floor(Math.random() * 1000);
+    </script>
+</body>
+</html>
