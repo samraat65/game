@@ -1,6 +1,6 @@
 /*
 =============================================================================
-6x7 TACTICAL BOARD GAME - MULTIPLAYER SERVER (Updated with Board Size Options)
+6x7 TACTICAL BOARD GAME - MULTIPLAYER SERVER (Updated with Half-Board Placement)
 =============================================================================
 
 DEPLOYMENT INSTRUCTIONS:
@@ -215,19 +215,33 @@ class GameRoom {
         }
     }
 
-    // Helper method to get placement rows for players
-    getPlacementRows(player) {
-        const topRows = Math.ceil(this.boardSize.height / 3);
-        const bottomRows = Math.ceil(this.boardSize.height / 3);
+    // Helper method to get placement territories for players (half-board system)
+    getPlacementTerritories() {
+        const isOddHeight = this.boardSize.height % 2 === 1;
         
-        if (player === 1) {
-            return { min: 0, max: topRows - 1 };
+        if (isOddHeight) {
+            // Odd height: has neutral middle row that no one can place on
+            const neutralRow = Math.floor(this.boardSize.height / 2);
+            const player1Rows = Math.floor(this.boardSize.height / 2);
+            const player2Rows = Math.floor(this.boardSize.height / 2);
+            
+            return {
+                player1: { min: 0, max: player1Rows - 1 },
+                player2: { min: this.boardSize.height - player2Rows, max: this.boardSize.height - 1 },
+                neutralRow: neutralRow
+            };
         } else {
-            return { min: this.boardSize.height - bottomRows, max: this.boardSize.height - 1 };
+            // Even height: split evenly between players, no neutral row
+            const halfHeight = this.boardSize.height / 2;
+            return {
+                player1: { min: 0, max: halfHeight - 1 },
+                player2: { min: halfHeight, max: this.boardSize.height - 1 },
+                neutralRow: null
+            };
         }
     }
 
-    // Helper method to get healing rows
+    // Helper method to get healing rows (still use edge rows)
     getHealingRows() {
         return {
             player1: this.boardSize.height - 1, // Bottom row for player 1
@@ -332,9 +346,18 @@ function handlePlacePiece(gameRoom, player, data) {
         return;
     }
 
-    // Check placement zone based on board size
-    const placementRows = gameRoom.getPlacementRows(player.playerNumber);
-    if (row < placementRows.min || row > placementRows.max) {
+    // Check placement zone using new half-board system
+    const territories = gameRoom.getPlacementTerritories();
+    const playerTerritory = player.playerNumber === 1 ? territories.player1 : territories.player2;
+    
+    // Check if placing in neutral row (forbidden)
+    if (territories.neutralRow !== null && row === territories.neutralRow) {
+        gameRoom.broadcastMessage('Cannot place pieces in the neutral middle row!', 'error');
+        return;
+    }
+    
+    // Check if placing in correct territory
+    if (row < playerTerritory.min || row > playerTerritory.max) {
         gameRoom.broadcastMessage(`Player ${player.playerNumber} can only place pieces in their territory!`, 'error');
         return;
     }
@@ -413,7 +436,7 @@ function handleSelectCell(gameRoom, player, data) {
                 gameRoom.broadcastMessage('You cannot move after attacking!', 'error');
             }
         } else if (targetPiece && targetPiece.player !== selectedPiece.player && canAttack(selectedPiece, gameState.selectedCell.row, gameState.selectedCell.col, row, col, gameState, gameRoom.boardSize)) {
-            // Attack piece - FIXED: Can attack without moving first
+            // Attack piece - Can attack without moving first
             if (!gameState.hasAttacked) {
                 attackPiece(gameRoom, gameState.selectedCell.row, gameState.selectedCell.col, row, col);
                 gameState.hasAttacked = true;
