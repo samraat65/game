@@ -83,6 +83,14 @@
             background-color: #B8860B;
         }
         
+        .cell.player1-territory {
+            background-color: #E6F3FF;
+        }
+        
+        .cell.player2-territory {
+            background-color: #FFE6E6;
+        }
+        
         .cell.highlighted {
             background-color: #90EE90;
         }
@@ -280,15 +288,19 @@
                 <select id="boardSizeSelect">
                     <option value="6x7">6x7 (Default)</option>
                     <option value="4x5">4x5 (Small)</option>
-                    <option value="8x9">8x9 (Large)</option>
                     <option value="5x6">5x6 (Medium)</option>
+                    <option value="5x9">5x9 (Tall)</option>
+                    <option value="6x6">6x6 (Square)</option>
+                    <option value="7x7">7x7 (Large Square)</option>
+                    <option value="8x9">8x9 (Large)</option>
                 </select>
             </div>
             
             <button onclick="joinGame()">Join Game</button>
             <div style="margin-top: 10px; font-size: 12px; color: #666;">
                 Share the same Room ID with your friend to play together!<br>
-                Board size must match between players.
+                Board size must match between players.<br>
+                Each player sets up on their half of the board.
             </div>
         </div>
         
@@ -423,7 +435,7 @@
             } else if (gameState.gamePhase === 'placement') {
                 document.getElementById('phaseInfo').textContent = `Placement Phase - Turn ${gameState.placementTurn}/2`;
                 document.getElementById('placementCounter').textContent = `Pieces placed this turn: ${gameState.piecesPlacedThisTurn}/4`;
-                document.getElementById('gameInfo').textContent = 'Place 4 pieces in your territory';
+                document.getElementById('gameInfo').textContent = 'Place 4 pieces in your territory (highlighted area)';
                 updatePieceSelector();
             } else if (gameState.gamePhase === 'battle') {
                 document.getElementById('phaseInfo').textContent = 'Battle Phase';
@@ -487,13 +499,24 @@
             // Create board if it doesn't exist or size changed
             if (boardElement.children.length !== boardWidth * boardHeight) {
                 boardElement.innerHTML = '';
-                const middleRow = Math.floor(boardHeight / 2);
                 
                 for (let row = 0; row < boardHeight; row++) {
                     for (let col = 0; col < boardWidth; col++) {
                         const cell = document.createElement('div');
                         cell.className = 'cell';
-                        if (row === middleRow) cell.classList.add('middle-row');
+                        
+                        // Add territory highlighting during placement phase
+                        if (gameState && gameState.gamePhase === 'placement') {
+                            const territories = getPlacementTerritories();
+                            if (row >= territories.player1.min && row <= territories.player1.max) {
+                                cell.classList.add('player1-territory');
+                            } else if (row >= territories.player2.min && row <= territories.player2.max) {
+                                cell.classList.add('player2-territory');
+                            } else if (territories.neutralRow !== null && row === territories.neutralRow) {
+                                cell.classList.add('middle-row');
+                            }
+                        }
+                        
                         cell.dataset.row = row;
                         cell.dataset.col = col;
                         cell.onclick = () => cellClick(row, col);
@@ -502,11 +525,25 @@
                 }
             }
             
-            // Clear all cells first
+            // Clear all cells first and re-apply territory colors
             Array.from(boardElement.children).forEach(cell => {
                 cell.classList.remove('selected');
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
+                
+                // Re-apply territory highlighting during placement phase
+                if (gameState && gameState.gamePhase === 'placement') {
+                    const territories = getPlacementTerritories();
+                    cell.classList.remove('player1-territory', 'player2-territory', 'middle-row');
+                    
+                    if (row >= territories.player1.min && row <= territories.player1.max) {
+                        cell.classList.add('player1-territory');
+                    } else if (row >= territories.player2.min && row <= territories.player2.max) {
+                        cell.classList.add('player2-territory');
+                    } else if (territories.neutralRow !== null && row === territories.neutralRow) {
+                        cell.classList.add('middle-row');
+                    }
+                }
                 
                 if (!gameState.board || !gameState.board[row] || !gameState.board[row][col]) {
                     cell.innerHTML = '';
@@ -552,6 +589,31 @@
                     cell.innerHTML = '';
                 }
             });
+        }
+        
+        function getPlacementTerritories() {
+            const isOddHeight = boardHeight % 2 === 1;
+            
+            if (isOddHeight) {
+                // Odd height: has neutral middle row
+                const neutralRow = Math.floor(boardHeight / 2);
+                const player1Rows = Math.floor(boardHeight / 2);
+                const player2Rows = Math.floor(boardHeight / 2);
+                
+                return {
+                    player1: { min: 0, max: player1Rows - 1 },
+                    player2: { min: boardHeight - player2Rows, max: boardHeight - 1 },
+                    neutralRow: neutralRow
+                };
+            } else {
+                // Even height: split evenly
+                const halfHeight = boardHeight / 2;
+                return {
+                    player1: { min: 0, max: halfHeight - 1 },
+                    player2: { min: halfHeight, max: boardHeight - 1 },
+                    neutralRow: null
+                };
+            }
         }
         
         function cellClick(row, col) {
